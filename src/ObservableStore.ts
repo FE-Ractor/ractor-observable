@@ -1,36 +1,19 @@
-import { Store, StoreContext } from "ractor"
-import { Scheduler } from "js-actor"
-import { BehaviorSubject, Observable } from "rxjs"
-import { ObservableReceive } from "./ObservableReceive"
-import { ObservableScheduler } from "./ObservableScheduler"
-import { ObservableReceiveBuilder } from "./ObservableReceiveBuilder"
-import { shallowPartialEqual } from "./utils/shallowPartialEqual"
+import { Store } from "ractor"
+import { IActorReceive } from "js-actor"
+import { ObservableReceiveBuilder } from "./ObservableReceiveBuilder";
+import { ObservableScheduler } from "./ObservableScheduler";
 
-export abstract class ObservableStore<T> extends Store<any> {
-  private state$: BehaviorSubject<Observable<T>>
-  public abstract state: T
+export abstract class ObservableStore<S> extends Store<S> {
+  abstract createReceive(): IActorReceive
 
-  protected abstract createObservableReceive(): ObservableReceive
-
-  public createState$(state: T) {
-    return new BehaviorSubject(Observable.of(state)).mergeAll().distinctUntilChanged(shallowPartialEqual).scan((acc: T, x: T) => Object.assign(acc, x)) as any
-  }
-
-  public receive() {
-    this.state$ = this.createState$(this.state)
-    const listeners = this.createObservableReceive().getListener()
-    const eventStream = this.context.system.eventStream
-    this.context.scheduler = new ObservableScheduler(eventStream, this.context.name, listeners, this) as any
-    this.context.scheduler.start()
-    this.preStart()
-  }
-
-  public observableReceiveBuilder() {
+  protected receiveBuilder() {
     return new ObservableReceiveBuilder()
   }
 
-  public createReceive() {
-    return this.receiveBuilder().build()
+  public receive() {
+    const receive = this.createReceive()
+    this.context.scheduler = new ObservableScheduler(this.context.system, this.context.path, receive.listeners, this)
+    this.context.scheduler.start()
+    this.preStart()
   }
-
 }

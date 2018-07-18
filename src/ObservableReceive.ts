@@ -1,9 +1,6 @@
-import { Listener } from "./ObservableReceiveBuilder"
+import { IActorReceive } from "js-actor"
+import { Listener } from "./Listener"
 
-export class ObservableReceive {
-	public getListener() {
-		return this.listeners
-	}
-	constructor(private listeners: Listener[]) {
-	}
+export class ObservableReceive implements IActorReceive {
+  constructor(public listeners: Listener[]) { }
 }
